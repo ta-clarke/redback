@@ -5,6 +5,7 @@ import bilby
 from scipy.special import gammaln, erf
 from redback.utils import logger
 from bilby.core.prior import DeltaFunction, Constraint
+import math
 
 
 class _RedbackParameterStore:
@@ -18,6 +19,27 @@ class _RedbackParameterStore:
     def parameters(self, parameters):
         self._parameters = dict() if parameters is None else parameters
 
+
+_FLOAT_MAX = np.finfo(float).max
+ 
+ 
+def _safe_scalar(value: Any) -> float:
+    """
+    Fast, scalar-only equivalent of ``np.nan_to_num(value)`` (default nan=0.0 /
+    posinf=float-max / neginf=float-min behaviour).
+ 
+    log-likelihood values are always scalars by the time they reach this guard, but
+    ``np.nan_to_num`` pays for full ndarray machinery (dtype checks, isnan/isposinf/
+    isneginf, np.where) on every call regardless. Since this runs on the order of
+    10^5-10^7 times during sampling, a plain ``math`` check is substantially cheaper
+    and returns bit-identical results for scalar input.
+    """
+    value = float(value)
+    if math.isnan(value):
+        return 0.0
+    if math.isinf(value):
+        return _FLOAT_MAX if value > 0 else -_FLOAT_MAX
+    return value
 
 class _RedbackLikelihood(_RedbackParameterStore, bilby.Likelihood):
 
@@ -218,13 +240,15 @@ class GaussianLikelihood(_RedbackLikelihood):
             self._noise_log_likelihood = self._gaussian_log_likelihood(res=self.y, sigma=self.sigma)
         return self._noise_log_likelihood
 
+
     def log_likelihood(self, parameters=None) -> float:
         """
         :return: The log-likelihood.
         :rtype: float
         """
         self._update_parameters(parameters)
-        return np.nan_to_num(self._gaussian_log_likelihood(res=self.residual, sigma=self.sigma))
+        return _safe_scalar(self._gaussian_log_likelihood(res=self.residual, sigma=self.sigma))
+
 
     @staticmethod
     def _gaussian_log_likelihood(res: np.ndarray, sigma: Union[float, np.ndarray]) -> Any:
