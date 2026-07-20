@@ -1238,7 +1238,8 @@ def two_component_kilonova_model(time, redshift, mej_1, vej_1, temperature_floor
     dense_resolution = kwargs.get("dense_resolution", 500)
     # Convert user times to source frame seconds for optimal grid
     time_source_frame_seconds = time * day_to_s / (1. + redshift)
-    time_temp = get_optimal_time_array(1e-2, 86400*6, dense_resolution, user_times=time_source_frame_seconds, time_units="seconds")
+    #time_temp = get_optimal_time_array(1e-2, 86400*6, dense_resolution, user_times=time_source_frame_seconds, time_units="seconds")
+    time_temp = get_optimal_time_array(1e-2, 7e6, dense_resolution, user_times=time_source_frame_seconds, time_units='seconds') # in source frame
     time_obs = time
 
     mej = [mej_1, mej_2]
@@ -1259,11 +1260,14 @@ def two_component_kilonova_model(time, redshift, mej_1, vej_1, temperature_floor
             temp_kwargs['temperature_floor'] = temperature_floor[x]
             _, temperature, r_photosphere = _one_component_kilonova_model(time_temp, mej[x], vej[x], kappa[x],
                                                                           **temp_kwargs)
+            #print(time_temp)
             # interpolate properties onto observation times
             temp_func = interp1d(time_temp, y=temperature)
             rad_func = interp1d(time_temp, y=r_photosphere)
             temp = temp_func(time)
+            #print(temp)
             photosphere = rad_func(time)
+            #print(photosphere)
             flux_density = blackbody_to_flux_density(temperature=temp, r_photosphere=photosphere,
                                                      dl=dl, frequency=frequency)
             units = flux_density.unit
