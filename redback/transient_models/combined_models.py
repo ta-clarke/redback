@@ -327,3 +327,32 @@ def afterglow_kilonova_sed(time, redshift, av, **model_kwargs):
                 raise ValueError("Output format must be 'flux_density' or 'magnitude' when providing 'frequency'.")
         else:
             raise ValueError("Must provide either 'bands' or 'frequency' in model_kwargs to get non-spectra output.")
+
+def tophat_emulator_and_nicholl_bns(time, redshift, av, thv, loge0, thc, logn0, p, logepse, logepsb, g0, mass_1, mass_2, lambda_s, kappa_red, kappa_blue, mtov,
+                                    epsilon, alpha, cos_theta_open, cos_theta_cocoon, 
+                                    temperature_floor_1, temperature_floor_2, temperature_floor_3, **kwargs):
+    
+    """
+
+    """
+    
+    kwargs['output_format'] = 'flux_density'
+    afterglow = tm.afterglow_models.tophat_from_emulator(time=time, redshift=redshift, thv=thv, loge0=loge0, thc=thc, logn0=logn0,
+                                           p=p, logepse=logepse, logepsb=logepsb, g0=g0, **kwargs)
+
+    # cos viewing angle
+    cos_theta = np.cos(thv)
+    kilonova = tm.kilonova_models.nicholl_bns(
+        time=time, redshift=redshift, mass_1=mass_1, mass_2=mass_2, lambda_s=lambda_s,
+        kappa_red=kappa_red, kappa_blue=kappa_blue, mtov=mtov, epsilon=epsilon, alpha=alpha,
+        cos_theta=cos_theta, cos_theta_open=cos_theta_open, cos_theta_cocoon=cos_theta_cocoon,
+        temperature_floor_1=temperature_floor_1, temperature_floor_2=temperature_floor_2,
+        temperature_floor_3=temperature_floor_3, **kwargs)
+    
+    combined = afterglow + kilonova
+    r_v = kwargs.get('r_v', 3.1)
+    # correct for extinction
+    angstroms = nu_to_lambda(kwargs['frequency'])
+    combined = em._perform_extinction(flux_density=combined, angstroms=angstroms, av_host=av, rv_host=r_v,
+                                      redshift=redshift, **kwargs)
+    return combined
