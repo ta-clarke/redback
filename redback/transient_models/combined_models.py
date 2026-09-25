@@ -356,3 +356,26 @@ def tophat_emulator_and_nicholl_bns(time, redshift, av, thv, loge0, thc, logn0, 
     combined = em._perform_extinction(flux_density=combined, angstroms=angstroms, av_host=av, rv_host=r_v,
                                       redshift=redshift, **kwargs)
     return combined
+
+
+def tophat_emulator_and_metzger(time, redshift, av, thv, loge0, thc, logn0, p, logepse, logepsb, g0, mej, vej, beta, kappa, **kwargs):
+    
+    """
+
+    """
+    
+    kwargs['output_format'] = 'flux_density'
+    afterglow = tm.afterglow_models.tophat_from_emulator(time=time, redshift=redshift, thv=thv, loge0=loge0, thc=thc, logn0=logn0,
+                                           p=p, logepse=logepse, logepsb=logepsb, g0=g0, **kwargs)
+
+    # cos viewing angle
+    #cos_theta = np.cos(thv)
+    kilonova = tm.kilonova_models.metzger_kilonova_model(time=time, redshift=redshift, mej=mej, vej=vej, beta=beta, kappa=kappa, **kwargs)
+    
+    combined = afterglow + kilonova
+    r_v = kwargs.get('r_v', 3.1)
+    # correct for extinction
+    angstroms = nu_to_lambda(kwargs['frequency'])
+    combined = em._perform_extinction(flux_density=combined, angstroms=angstroms, av_host=av, rv_host=r_v,
+                                      redshift=redshift, **kwargs)
+    return combined
